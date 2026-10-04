@@ -95,8 +95,8 @@ st.markdown('<div class="hud-title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 st.markdown('<div class="hud-subtitle">MARK VII // SYSTEM ONLINE</div>', unsafe_allow_html=True)
 
 # Supabase
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("https://cxhhovkwckfstcagtpxi.supabase.co/rest/v1/")
+SUPABASE_KEY = os.getenv("sb_publishable_qJaOspAHc1MflOXHpnsRbg_v42viZuG")
 
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
@@ -136,7 +136,7 @@ def query_jarvis(user_input: str):
 
     system_prompt = {
         "role": "system",
-        "content": "O teu nome é Jarvis. Tu és um assistente virtual de inteligência avançada, refinado, direto e leal ao teu criador. Responde sempre em português com elegância e clareza."
+        "content": "O teu nome é Jarvis. Tu és um assistente virtual de inteligência avançada, refinado, direto e leal ao teu criador. Responde sempre em português de forma humanizada, direta e amigável."
     }
     
     formatted_messages = [system_prompt] + [
