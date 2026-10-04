@@ -3,69 +3,98 @@ import requests
 import streamlit as st
 from supabase import create_client, Client
 
-# Configuração da página e tema visual futurista (Dark / Jarvis Tech Style)
+# Configuração da página
 st.set_page_config(
-    page_title="JARVIS AI",
+    page_title="J.A.R.V.I.S.",
     page_icon="🤖",
     layout="centered"
 )
 
-# Estilização CSS customizada
+# Estilização CSS HUD Futurista
 st.markdown("""
 <style>
-    /* Fundo geral escuro tech */
-    .stApp {
-        background-color: #0b0f19;
-        color: #e0e6ed;
+    /* Importação de fonte futurista */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+    /* Fundo geral e remoção de elementos brancos */
+    .stApp, [data-testid="stHeader"], [data-testid="stBottom"] {
+        background-color: #050811 !important;
+        color: #00f0ff !important;
     }
     
-    /* Título com brilho azul ciano */
-    .jarvis-title {
-        font-family: 'Trebuchet MS', sans-serif;
-        font-size: 2.8rem;
-        font-weight: 800;
-        text-align: center;
-        color: #00d2ff;
-        text-shadow: 0px 0px 15px rgba(0, 210, 255, 0.6);
-        margin-bottom: 5px;
-    }
-    
-    .jarvis-subtitle {
-        text-align: center;
-        color: #8a9ba8;
-        font-size: 0.95rem;
-        margin-bottom: 25px;
-        letter-spacing: 1px;
+    body {
+        font-family: 'Rajdhani', sans-serif;
     }
 
-    /* Estilo das caixas de mensagem do usuário e assistente */
+    /* Cabeçalho HUD */
+    .hud-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 3rem;
+        font-weight: 900;
+        text-align: center;
+        color: #00f0ff;
+        text-shadow: 0 0 20px rgba(0, 240, 255, 0.8), 0 0 40px rgba(0, 240, 255, 0.3);
+        letter-spacing: 4px;
+        margin-top: -20px;
+    }
+    
+    .hud-subtitle {
+        font-family: 'Orbitron', sans-serif;
+        text-align: center;
+        color: #ffb703;
+        font-size: 0.75rem;
+        letter-spacing: 3px;
+        margin-bottom: 30px;
+        opacity: 0.9;
+    }
+
+    /* Estilo das caixas de mensagem do chat */
     [data-testid="stChatMessage"] {
-        background-color: #131a29;
-        border: 1px solid #1f2a3e;
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.3);
+        background: rgba(10, 20, 38, 0.7) !important;
+        border: 1px solid rgba(0, 240, 255, 0.2) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        margin-bottom: 12px !important;
     }
 
-    /* Destaque para caixa do assistente (Jarvis) */
+    /* Mensagem do Assistente (Jarvis) */
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
-        border-left: 4px solid #00d2ff;
-        background-color: #0e1626;
+        border-left: 4px solid #00f0ff !important;
+        box-shadow: -5px 0 15px rgba(0, 240, 255, 0.2);
     }
 
-    /* Destaque para caixa do utilizador */
+    /* Mensagem do Utilizador */
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-        border-right: 4px solid #ffb703;
+        border-right: 4px solid #ffb703 !important;
+        box-shadow: 5px 0 15px rgba(255, 183, 3, 0.2);
     }
+
+    /* Personalização do gravador de áudio */
+    [data-testid="stAudioInput"] {
+        background-color: rgba(10, 20, 38, 0.8) !important;
+        border: 1px solid rgba(0, 240, 255, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 8px !important;
+    }
+
+    /* Campo de entrada de texto */
+    [data-testid="stChatInput"] {
+        border-radius: 12px !important;
+        border: 1px solid rgba(0, 240, 255, 0.4) !important;
+        background-color: #0a1426 !important;
+    }
+
+    /* Esconde marca d'água e menus do Streamlit */
+    #MainMenu, footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# Título do App
-st.markdown('<div class="jarvis-title">🤖 J.A.R.V.I.S.</div>', unsafe_allow_html=True)
-st.markdown('<div class="jarvis-subtitle">SISTEMA INTELIGENTE DE ASSISTÊNCIA PESSOAL</div>', unsafe_allow_html=True)
+# Título HUD
+st.markdown('<div class="hud-title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
+st.markdown('<div class="hud-subtitle">MARK VII // SYSTEM ONLINE</div>', unsafe_allow_html=True)
 
-# Conexão ao Supabase
+# Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -73,111 +102,90 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        st.warning(f"Aviso: Não foi possível conectar ao Supabase: {e}")
+    except Exception:
+        pass
 
-# Função para carregar histórico do Supabase
 def load_history():
     if supabase:
         try:
             response = supabase.table("chat_history").select("role, content").order("id", desc=False).execute()
             return response.data if response.data else []
-        except Exception as e:
-            st.error(f"Erro ao carregar histórico: {e}")
+        except Exception:
+            pass
     return []
 
-# Função para salvar mensagens no Supabase
 def save_message(role: str, content: str):
     if supabase:
         try:
             supabase.table("chat_history").insert({"role": role, "content": content}).execute()
-        except Exception as e:
-            st.error(f"Erro ao salvar mensagem no Supabase: {e}")
+        except Exception:
+            pass
 
-# Inicialização do histórico de mensagens
 if "messages" not in st.session_state:
     st.session_state.messages = load_history()
 
-# Exibe o histórico de mensagens
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Função para enviar a consulta para o Pollinations AI
 def query_jarvis(user_input: str):
-    # Regista a mensagem do utilizador
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
     save_message("user", user_input)
 
-    # Prepara o prompt de sistema e mensagens
     system_prompt = {
         "role": "system",
-        "content": "O teu nome é Jarvis (J.A.R.V.I.S.). Tu és um assistente virtual pessoal altamente inteligente, educado, refinado e prestativo, exatamente como a IA do Homem de Ferro. Responde sempre em português do Brasil/Portugal de forma clara, natural e elegante. Quando te perguntarem quem és, confirma orgulhosamente que és o Jarvis."
+        "content": "O teu nome é Jarvis. Tu és um assistente virtual de inteligência avançada, refinado, direto e leal ao teu criador. Responde sempre em português com elegância e clareza."
     }
     
     formatted_messages = [system_prompt] + [
         {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
     ]
 
-    # Processa a resposta
     with st.chat_message("assistant"):
-        with st.spinner("Processando dados, mestre..."):
+        with st.spinner("Analisando dados..."):
             try:
                 response = requests.post(
                     "https://text.pollinations.ai/",
-                    json={
-                        "messages": formatted_messages,
-                        "model": "openai"
-                    },
+                    json={"messages": formatted_messages, "model": "openai"},
                     timeout=30
                 )
 
                 try:
                     data = response.json()
-                    if isinstance(data, dict):
-                        bot_response = data.get("content", data.get("response", str(data)))
-                    else:
-                        bot_response = str(data)
+                    bot_response = data.get("content", data.get("response", str(data))) if isinstance(data, dict) else str(data)
                 except Exception:
                     bot_response = response.text
 
                 if not bot_response or bot_response.strip() == "{}":
-                    bot_response = "Desculpe, mestre. Ocorreu um pequeno ruído na comunicação. Pode repetir a instrução?"
+                    bot_response = "Sistemas operacionais indisponíveis no momento. Repita a instrução, mestre."
 
             except Exception as e:
-                bot_response = f"Erro na conexão do sistema: {e}"
+                bot_response = f"Erro nos sensores: {e}"
 
             st.markdown(bot_response)
             st.session_state.messages.append({"role": "assistant", "content": bot_response})
             save_message("assistant", bot_response)
 
-# --- ENTRADA POR ÁUDIO (MICROFONE) ---
-st.write("---")
-audio_input = st.audio_input("🎙️ Gravar mensagem de voz")
-
+# Microfone
+audio_input = st.audio_input("🎙️ Comando de Voz")
 if audio_input is not None:
-    # Evita reprocessar o mesmo áudio ao atualizar a página
     audio_bytes = audio_input.read()
     if "last_audio" not in st.session_state or st.session_state.last_audio != audio_bytes:
         st.session_state.last_audio = audio_bytes
-        with st.spinner("Transcrevendo áudio..."):
+        with st.spinner("Descodificando frequência de voz..."):
             try:
-                # Transcrição enviando o arquivo para a API de fala do Pollinations
                 files = {"file": ("audio.wav", audio_bytes, "audio/wav")}
                 res = requests.post("https://text.pollinations.ai/transcribe", files=files, timeout=30)
                 transcribed_text = res.text.strip()
 
                 if transcribed_text and not transcribed_text.startswith("Error"):
-                    st.info(f"🗣️ **Voz identificada:** *\"{transcribed_text}\"*")
                     query_jarvis(transcribed_text)
                     st.rerun()
-                else:
-                    st.error("Não foi possível transcrever o áudio com clareza.")
-            except Exception as e:
-                st.error(f"Erro ao processar áudio: {e}")
+            except Exception:
+                pass
 
-# --- ENTRADA POR TEXTO ---
-if prompt := st.chat_input("Insira o seu comando, mestre..."):
+# Caixa de Entrada
+if prompt := st.chat_input("Instrução do sistema..."):
     query_jarvis(prompt)
